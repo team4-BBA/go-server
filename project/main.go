@@ -1,14 +1,14 @@
 package main
 
 import (
-    "sampleapp/routes"
+    "go-server/routes"
 
     "github.com/gin-gonic/gin"
 )
 
 func main() {
     router := gin.Default()
-    router.LoadHTMLGlob("views/*.html")
+    router.LoadHTMLGlob("../views/*.html")
     router.Static("/assets", "./assets")
 
     user := router.Group("/user")

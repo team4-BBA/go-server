@@ -1,4 +1,3 @@
-routes/user_routes.go
 package routes
 
 import (
@@ -13,7 +12,7 @@ func UserSignUp(ctx *gin.Context) {
     password := ctx.PostForm("password")
     passwordConf := ctx.PostForm("passwordconfirmation")
     println("username: " + username)
-    println("email: " + emailaddress)
+    println("email: " + email)
     println("password: " + password)
     println("passwordConf: " + passwordConf)
 
