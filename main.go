@@ -5,12 +5,10 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
-	"net/http"
 	"io/ioutil"
+	"net/http"
 	"strconv"
 	"strings"
-	"github.com/gin-gonic/autotls"
-	"log"
 )
 
 type Facilities struct {
@@ -214,7 +212,9 @@ func main(){
 	})
 
 
+	c_err := router.RunTLS("ec2-18-182-35-25.ap-northeast-1.compute.amazonaws.com:8080", "server.crt", "server.key")
+	if c_err != nil {
+		fmt.Println("Server could not be started")
+	}
 
-
-log.Fatal(autotls.Run(router, "ec2-18-182-35-25.ap-northeast-1.compute.amazonaws.com"))
 }
