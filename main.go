@@ -5,7 +5,8 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
-
+	"net/http"
+	"io/ioutil"
 	"strconv"
 	"strings"
 )
@@ -50,6 +51,10 @@ func dot(v1 string , v2 string)(float64){
 }
 
 func main(){
+
+
+
+
 	router := gin.Default()
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"*"}
@@ -60,6 +65,42 @@ func main(){
 		panic(err)
 	}
 	defer conn.Close()
+
+
+
+	router.POST("/pref", func(ctx *gin.Context) {
+		userId := ctx.PostForm("userId")
+		words := ctx.PostForm("words")
+		//cloudfuncitonに投げた結果
+		url := "https://us-central1-arctic-conduit-280420.cloudfunctions.net/GetVector?type=0&value="+words
+
+		resp, _ := http.Get(url)
+		defer resp.Body.Close()
+
+		byteArray, _ := ioutil.ReadAll(resp.Body)
+		if(string(byteArray)==""){
+			fmt.Printf(string(byteArray))
+			ctx.JSON(500, gin.H{
+				"message": "failed in creating",
+			})
+		}else{
+			_, err = conn.Do("SET", "user:"+userId+":vec", string(byteArray) )
+		if err != nil {
+			ctx.JSON(400, gin.H{
+				"message": "failed in creating",
+			})
+		} else {
+			ctx.JSON(200, gin.H{
+				"message": "created",
+			})
+			}
+		}
+	})
+
+
+
+
+
 	router.GET("/pref", func(ctx *gin.Context) {
 		userid:= ctx.Query("userId")
 		const num = 100
