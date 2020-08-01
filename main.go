@@ -1,11 +1,13 @@
 package main
 
 import (
-	"fmt"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
-	)
+	"strconv"
+	"strings"
+)
 
 type Facilities struct {
 	id int `json:"id"`
@@ -21,15 +23,27 @@ type Response struct {
 	message   string    `json:"message"`
 	similarity float32 `json:"similarity"`
 }
-func dot(v1 string , v2 string){
-	//どっちもベクトル
-	if (string(getRuneAt(v1, 0))=="[")&&(string(getRuneAt(v2, 0))=="["){
-	//コンマごとに区切って配列化
-	var  sum float32 =0.0
-		//要素をfloatに変更
-		// 同じインデックスの要素を掛けてsumにたす
+
+
+func dot(v1 string , v2 string)(float64){
+	var vec1 []string
+	var vec2 []string
+	var sum float64=0.0
+	//string array to float  array
+	v1=strings.Trim(v1,"[")
+	v1=strings.Trim(v1,"]")
+	v2=strings.Trim(v2,"[")
+	v2=strings.Trim(v2,"]")
+	vec1 = strings.Split(v1, ",")
+	vec2 = strings.Split(v2, ",")
+	for i := 0; i < 300; i++ {
+		s1,_:=strconv.ParseFloat(vec1[i], 64)
+		s2,_:=strconv.ParseFloat(vec2[i], 64)
+		sum =sum+ s1*s2
+	}
 	return sum
 }
+
 func main(){
 	router := gin.Default()
 	config := cors.DefaultConfig()
@@ -43,14 +57,14 @@ func main(){
 	defer conn.Close()
 
 
-	router.GET("/pref", func(ctx *gin.Context) {
+	router.GET("/similarity", func(ctx *gin.Context) {
 		userid:= ctx.Query("userId")
-		fid:= ctx.Param("facilityId")
+		fid:= ctx.Query("facilityId")
 
 		//DB検索
 		v1, err1 := redis.String(conn.Do("GET", "user:"+userid+":vec"))
-		v2, err2 := redis.String(conn.Do("GET", "user:"+fid+":vec"))
-		fmt.Printf(string(v1))
+		v2, err2 := redis.String(conn.Do("GET", "hotel:"+fid+":vec"))
+
 		if err1 != nil {
 			ctx.JSON(404, gin.H{
 				"message": "user  not found",
@@ -60,7 +74,6 @@ func main(){
 					"message": "hotel  not found",
 				})
 		}else {
-
 			dotprod:=dot(v1,v2)
 			ctx.JSON(200, gin.H{
 				"message": "succeed",
