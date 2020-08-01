@@ -9,6 +9,8 @@ import (
 	"io/ioutil"
 	"strconv"
 	"strings"
+	"github.com/gin-gonic/autotls"
+	"log"
 )
 
 type Facilities struct {
@@ -214,5 +216,5 @@ func main(){
 
 
 
-	router.Run()
+log.Fatal(autotls.Run(router, "ec2-18-182-35-25.ap-northeast-1.compute.amazonaws.com"))
 }
