@@ -1,10 +1,11 @@
 package main
 
 import (
-
+	"fmt"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
+
 	"strconv"
 	"strings"
 )
@@ -30,18 +31,22 @@ func dot(v1 string , v2 string)(float64){
 	var vec2 []string
 	var sum float64=0.0
 	//string array to float  array
-	v1=strings.Trim(v1,"[")
-	v1=strings.Trim(v1,"]")
-	v2=strings.Trim(v2,"[")
-	v2=strings.Trim(v2,"]")
-	vec1 = strings.Split(v1, ",")
-	vec2 = strings.Split(v2, ",")
-	for i := 0; i < 300; i++ {
-		s1,_:=strconv.ParseFloat(vec1[i], 64)
-		s2,_:=strconv.ParseFloat(vec2[i], 64)
-		sum =sum+ s1*s2
+	if(v1[0:1]=="["&&v2[0:1]=="[") {
+		v1 = strings.Trim(v1, "[")
+		v1 = strings.Trim(v1, "]")
+		v2 = strings.Trim(v2, "[")
+		v2 = strings.Trim(v2, "]")
+		vec1 = strings.Split(v1, ",")
+		vec2 = strings.Split(v2, ",")
+		for i := 0; i < 300; i++ {
+			s1, _ := strconv.ParseFloat(vec1[i], 64)
+			s2, _ := strconv.ParseFloat(vec2[i], 64)
+			sum = sum + s1*s2
+		}
+		return sum
+	}else{
+		return 999999;
 	}
-	return sum
 }
 
 func main(){
@@ -50,11 +55,86 @@ func main(){
 	config.AllowOrigins = []string{"*"}
 	router.Use(cors.New(config))
 	//redis接続
-	conn, err := redis.Dial("tcp", "localhost:6379")
+	conn, err := redis.Dial("tcp", "ec2-18-182-35-25.ap-northeast-1.compute.amazonaws.com:6379")
 	if err != nil {
 		panic(err)
 	}
 	defer conn.Close()
+	router.GET("/pref", func(ctx *gin.Context) {
+		userid:= ctx.Query("userId")
+		const num = 100
+
+			//DB検索
+		v1, err := redis.String(conn.Do("GET", "user:"+userid+":vec"))
+			if err != nil {
+				ctx.JSON(404, gin.H{
+					"message": "invalid uesr id",
+				})
+			}
+		var sims [40000]float64;//類似度を入れる配列
+
+		fmt.Printf("connection done")
+
+		var args [] interface{}
+
+		for i := 0; i < 40000; i++ {
+			args = append(args,"hotel:"+strconv.Itoa(i)+":vec")
+		}
+
+
+
+			v2, _:= redis.Strings(conn.Do("MGET", args...))
+
+		fmt.Printf(v2[0])
+		for i := 0; i < 40000; i++ {
+			if(v2[i]==""){
+				sims[i] = -999999.0;
+			}else {
+
+				dp := dot(v1, string(v2[i]))
+				if (dp == 999999) { //データベース登録ミスは類似度0
+					sims[i] = -999999.0
+				} else {
+					sims[i] = dot(v1, v2[i])
+				}
+			}
+			}
+
+
+		fmt.Printf("dot prod done")
+		var large_indexes [num]int64;
+		//初期化
+		for i := 0; i < num; i++ {
+			large_indexes [i]=0//まんまhotelid
+		}
+
+
+
+		//最大インデックス格納
+		var reco [] interface{}//最大順に類似度を格納
+		for i := 0; i < num; i++ {
+			var max float64= -999999.0
+			var j int64=0
+			for j = 0; j < 4000; j++ {
+
+				if(max<sims[j]){
+
+					max=sims[j]
+					large_indexes[i]=j//最大値の更新
+				}
+			}
+			reco=append(reco,fmt.Sprintf("%f", sims[large_indexes[i]]))
+			sims[large_indexes[i]]=-999999.0//最大値は消す。
+		}
+
+		fmt.Printf("max serach done")
+
+			ctx.JSON(200, gin.H{
+				"message": "succeed",
+				"hotelids":large_indexes,
+				"similarities":reco,
+			})
+	})
 
 
 	router.GET("/similarity", func(ctx *gin.Context) {
@@ -70,19 +150,28 @@ func main(){
 				"message": "user  not found",
 			})
 		}else if err2 != nil {
-				ctx.JSON(404,gin.H{
-					"message": "hotel  not found",
-				})
-		}else {
-			dotprod:=dot(v1,v2)
-			ctx.JSON(200, gin.H{
-				"message": "succeed",
-				"user": userid,
-				"facility": fid,
-				"similarity": dotprod,
+			ctx.JSON(404,gin.H{
+				"message": "hotel  not found",
 			})
+		}else {
+			dotprod := dot(v1, v2)
+			if(dotprod==999999) {
+				ctx.JSON(404,gin.H{
+					"message": "dot product failed in calcurating",
+				})
+			}else{
+				ctx.JSON(200, gin.H{
+					"message":    "succeed",
+					"user":       userid,
+					"facility":   fid,
+					"similarity": dotprod,
+				})
+			}
 		}
 	})
+
+
+
 
 	router.Run()
 }

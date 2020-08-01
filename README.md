@@ -20,17 +20,12 @@
     |User data Update|POST|userId,words|
 
     - Response
-        - 正常系
+        - 正常系(以下は上位5つのデータだが、実際は上位100個)
         ```json
         {
-            "message": "success",
-            "facilities": [
-            {
-                "id": "<hotelID>",
-                "similarity": "<一致度を0~100で？>"
-            }
-          ]
-        }
+        "hotelids":[2708,1257,2242,2261,2476],
+        "message":"succeed",
+        "similarities":["0.320047","0.058159","0.012542","0.011167","0.011038"]}
         ```
         - 異常系 404 userがいないかuserのprefが登録されていないとき
         ```json
