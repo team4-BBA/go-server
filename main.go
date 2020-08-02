@@ -211,10 +211,10 @@ func main(){
 		}
 	})
 
-
-	c_err := router.RunTLS("ec2-18-182-35-25.ap-northeast-1.compute.amazonaws.com:8080", "server.crt", "server.key")
-	if c_err != nil {
-		fmt.Println("Server could not be started")
-	}
+	router.Run()
+	//c_err := router.RunTLS("ec2-18-182-35-25.ap-northeast-1.compute.amazonaws.com:8080", "server.crt", "server.key")
+	//if c_err != nil {
+	//	fmt.Println("Server could not be started")
+	//}
 
 }
